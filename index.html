@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  
+  <title>Amano Check Point · QRIS Scanner</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    body {
+      background: linear-gradient(145deg, #0b1a2e 0%, #1a2f44 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      margin: 0;
+    }
+    
+    .login-card {
+      background: rgba(255, 255, 255, 0.07);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 2.5rem;
+      padding: 2.5rem 2rem;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 1.8rem;
+    }
+    .brand i {
+      font-size: 2.2rem;
+      color: #6fc3ff;
+      filter: drop-shadow(0 0 8px rgba(80, 180, 255, 0.3));
+    }
+    .brand h1 {
+      font-size: 1.7rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+    .brand span {
+      color: #8bcbff;
+      font-weight: 300;
+    }
+    .subtitle {
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      border-left: 3px solid #3b9eff;
+      padding-left: 14px;
+    }
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+    .input-group label {
+      display: block;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .input-group .input-wrapper {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 60px;
+      padding: 0 18px;
+      transition: all 0.2s ease;
+    }
+    .input-group .input-wrapper:focus-within {
+      border-color: #3b9eff;
+      box-shadow: 0 0 0 3px rgba(59, 158, 255, 0.2);
+    }
+    .input-group .input-wrapper i {
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 1rem;
+      margin-right: 12px;
+    }
+    .input-group input {
+      width: 100%;
+      padding: 14px 0;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #ffffff;
+      font-size: 1rem;
+    }
+    .input-group input::placeholder {
+      color: rgba(255, 255, 255, 0.3);
+    }
+    .pin-dots {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin: 1.5rem 0 1.8rem;
+    }
+    .pin-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: 0.2s;
+    }
+    .pin-dot.filled {
+      background: #6fc3ff;
+      border-color: #3b9eff;
+      box-shadow: 0 0 12px rgba(59, 158, 255, 0.4);
+    }
+    .btn-login {
+      width: 100%;
+      padding: 15px 0;
+      background: linear-gradient(135deg, #2b7be0, #1a5bbf);
+      border: none;
+      border-radius: 60px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 20px rgba(26, 91, 191, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .btn-login:active {
+      transform: scale(0.98);
+    }
+    .error-msg {
+      background: rgba(255, 70, 70, 0.12);
+      border-left: 4px solid #ff5e5e;
+      color: #ffb3b3;
+      padding: 10px 16px;
+      border-radius: 40px;
+      font-size: 0.85rem;
+      margin: 1rem 0 0.5rem;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+    .error-msg.show {
+      display: flex;
+    }
+    .role-badge {
+      text-align: center;
+      margin-top: 1.5rem;
+      color: rgba(255, 255, 255, 0.25);
+      font-size: 0.7rem;
+    }
+
+    /* DASHBOARD */
+    .dashboard {
+      display: none;
+      max-width: 1000px;
+      width: 100%;
+    }
+    .dashboard.active {
+      display: block;
+      animation: fadeSlide 0.4s ease;
+    }
+    @keyframes fadeSlide {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .dashboard-header {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border-radius: 2rem;
+      padding: 1.2rem 1.8rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .dashboard-header h2 {
+      color: white;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1.2rem;
+    }
+    .dashboard-header h2 i {
+      color: #6fc3ff;
+    }
+    .role-tag {
+      padding: 6px 18px;
+      border-radius: 60px;
+      font-weight: 600;
+      font-size: 0.75rem;
+    }
+    .role-tag.admin {
+      background: rgba(255, 215, 0, 0.15);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      color: #ffd966;
+    }
+    .role-tag.petugas {
+      background: rgba(0, 230, 150, 0.08);
+      border-color: rgba(0, 230, 150, 0.15);
+      color: #7ae0b0;
+    }
+    .btn-logout {
+      background: transparent;
+      border: 1px solid rgba(255, 70, 70, 0.2);
+      color: #ff8a8a;
+      padding: 6px 18px;
+      border-radius: 60px;
+      cursor: pointer;
+      transition: 0.2s;
+      font-weight: 500;
+      font-size: 0.8rem;
+    }
+    .btn-logout:active {
+      transform: scale(0.95);
+    }
+    .flex-between {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ADMIN PANEL - DIPERBAIKI */
+    .admin-panel {
+      background: rgba(255, 215, 0, 0.05);
+      border: 1px solid rgba(255, 215, 0, 0.1);
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      display: none;
+    }
+    .admin-panel.show {
+      display: block;
+    }
+    .admin-panel .title {
+      color: #ffd966;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1rem;
+    }
+    .admin-panel .title i {
+      color: #ffd966;
+    }
+    .admin-panel .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .admin-panel .btn-admin-action {
+      padding: 12px;
+      border-radius: 60px;
+      border: 1px solid rgba(255, 215, 0, 0.2);
+      background: rgba(255, 215, 0, 0.05);
+      color: #ffd966;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+    .admin-panel .btn-admin-action:active {
+      transform: scale(0.95);
+    }
+    .admin-panel .btn-admin-action:hover {
+      background: rgba(255, 215, 0, 0.1);
+    }
+    .admin-panel .btn-admin-action.primary {
+      background: linear-gradient(135deg, #f9a825, #f57f17);
+      color: white;
+      border-color: transparent;
+    }
+    .admin-panel .btn-admin-action.primary:hover {
+      background: linear-gradient(135deg, #fbc02d, #f9a825);
+    }
+    .admin-panel .btn-admin-action.danger {
+      background: rgba(255, 70, 70, 0.1);
+      border-color: rgba(255, 70, 70, 0.2);
+      color: #ff8a8a;
+    }
+    .admin-panel .btn-admin-action.danger:hover {
+      background: rgba(255, 70, 70, 0.2);
+    }
+
+    /* CHECKPOINT GRID - DIPERBAIKI */
+    .checkpoint-section {
+      display: none;
+    }
+    .checkpoint-section.show {
+      display: block;
+    }
+    .section-title {
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 400;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title i {
+      color: #6fc3ff;
+    }
+    .checkpoint-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .checkpoint-card {
+      background: rgba(255, 255, 255, 0.04);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 1.2rem;
+      padding: 1.2rem 0.8rem;
+      text-align: center;
+      transition: 0.3s;
+      position: relative;
+      cursor: pointer;
+    }
+    .checkpoint-card:active {
+      transform: scale(0.95);
+    }
+    .checkpoint-card:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .checkpoint-card i {
+      font-size: 1.8rem;
+      color: #6fc3ff;
+      opacity: 0.8;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .checkpoint-card .name {
+      color: white;
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+    .checkpoint-card .badge {
+      display: inline-block;
+      margin-top: 6px;
+      font-size: 0.6rem;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 3px 12px;
+      border-radius: 30px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+    .checkpoint-card.scanned {
+      border-color: #4caf50;
+      background: rgba(76, 175, 80, 0.08);
+    }
+    .checkpoint-card.scanned .badge {
+      color: #81c784;
+      background: rgba(76, 175, 80, 0.15);
+    }
+    .admin-badge {
+      position: absolute;
+      top: 6px;
+      right: 8px;
+      font-size: 0.55rem;
+      background: rgba(255, 215, 0, 0.15);
+      color: #ffd966;
+      padding: 2px 8px;
+      border-radius: 30px;
+      display: none;
+    }
+    .admin-badge.show {
+      display: block;
+    }
+
+    /* BUTTON SCAN */
+    .btn-scan {
+      width: 100%;
+      padding: 16px 0;
+      background: linear-gradient(135deg, #2b7be0, #1a5bbf);
+      border: none;
+      border-radius: 60px;
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 8px 20px rgba(26, 91, 191, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 0.5rem;
+    }
+    .btn-scan:active {
+      transform: scale(0.98);
+    }
+    .btn-scan.hidden {
+      display: none;
+    }
+
+    /* HISTORY */
+    .history-section {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 1.5rem;
+      padding: 1.2rem;
+      margin-top: 1.5rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: block;
+    }
+    .history-section .title {
+      color: white;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.95rem;
+    }
+    .history-section .title i {
+      color: #6fc3ff;
+    }
+    .history-section .title .count {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.4);
+      font-weight: 400;
+      margin-left: auto;
+    }
+    .history-section .title .refresh-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: none;
+      color: rgba(255, 255, 255, 0.4);
+      padding: 4px 12px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 0.7rem;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .history-section .title .refresh-btn:active {
+      transform: scale(0.95);
+    }
+    .history-list {
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    .history-item {
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 0.8rem;
+      padding: 0.8rem;
+      margin-bottom: 0.5rem;
+      border-left: 3px solid rgba(111, 195, 255, 0.3);
+    }
+    .history-item .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    .history-item .area-name {
+      color: white;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    .history-item .area-name i {
+      color: #6fc3ff;
+      margin-right: 6px;
+    }
+    .history-item .time {
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 0.7rem;
+    }
+    .history-item .details {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.75rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .history-item .qris-code {
+      color: rgba(255, 255, 255, 0.15);
+      font-size: 0.6rem;
+      font-family: monospace;
+      word-break: break-all;
+      margin-top: 4px;
+    }
+    .history-empty {
+      color: rgba(255, 255, 255, 0.3);
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.85rem;
+    }
+    .history-empty i {
+      font-size: 1.5rem;
+      display: block;
+      margin-bottom: 0.5rem;
+      opacity: 0.3;
+    }
+
+    /* MODAL SCANNER */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.active {
+      display: flex;
+      animation: fadeSlide 0.3s ease;
+    }
+    .modal-content {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 2rem;
+      padding: 1.2rem;
+      max-width: 500px;
+      width: 100%;
+      max-height: 95vh;
+      overflow-y: auto;
+      position: relative;
+    }
+    .modal-close {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+    .modal-close:active {
+      transform: scale(0.9);
+    }
+    .modal-title {
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.8rem;
+      text-align: center;
+    }
+    .modal-title i {
+      color: #6fc3ff;
+      margin-right: 8px;
+    }
+
+    /* QRIS GENERATOR */
+    .qris-generator {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 1.2rem;
+      padding: 1rem;
+      margin-bottom: 0.8rem;
+      display: none;
+    }
+    .qris-generator.show {
+      display: block;
+    }
+    .qris-generator .label {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .qris-generator #qrcode {
+      display: flex;
+      justify-content: center;
+      margin: 6px 0;
+    }
+    .qris-generator .qris-code {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.7rem;
+      font-family: monospace;
+      word-break: break-all;
+      text-align: center;
+      margin-top: 6px;
+    }
+    .qris-generator .qris-area-name {
+      color: white;
+      font-weight: 600;
+      text-align: center;
+      margin-top: 2px;
+      font-size: 0.9rem;
+    }
+
+    .scanner-container {
+      background: #000;
+      border-radius: 1.2rem;
+      overflow: hidden;
+      margin-bottom: 0.8rem;
+      position: relative;
+      width: 100%;
+      min-height: 300px;
+      display: none;
+    }
+    .scanner-container.show {
+      display: block;
+    }
+    #scanner-video {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+      display: block;
+      background: #000;
+    }
+    .scanner-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border: 2px solid rgba(59, 158, 255, 0.4);
+      border-radius: 16px;
+      pointer-events: none;
+    }
+    .scanner-overlay::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 30px;
+      height: 2px;
+      background: #3b9eff;
+      animation: scanLine 2s infinite;
+    }
+    @keyframes scanLine {
+      0% { top: -2px; }
+      50% { top: calc(100% + 2px); }
+      100% { top: -2px; }
+    }
+
+    .scan-result {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 1rem;
+      padding: 0.8rem;
+      margin-bottom: 0.8rem;
+      display: none;
+    }
+    .scan-result.show {
+      display: block;
+    }
+    .scan-result .label {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .scan-result .value {
+      color: white;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-top: 4px;
+      word-break: break-all;
+    }
+    .scan-result .area-detected {
+      color: #81c784;
+      font-weight: 600;
+      margin-top: 4px;
+      font-size: 0.85rem;
+    }
+    .scan-result .area-detected.error {
+      color: #ff8a8a;
+    }
+    .scan-result .location-info {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.75rem;
+      margin-top: 4px;
+    }
+
+    .scanner-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .scanner-controls button {
+      flex: 1;
+      padding: 12px;
+      border-radius: 60px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: 0.2s;
+      min-width: 70px;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .scanner-controls button:active {
+      transform: scale(0.95);
+    }
+    .scanner-controls button.primary {
+      background: linear-gradient(135deg, #2b7be0, #1a5bbf);
+      border-color: transparent;
+    }
+    .scanner-controls button.success {
+      background: linear-gradient(135deg, #2e7d32, #1b5e20);
+      border-color: transparent;
+    }
+    .scanner-controls button.danger {
+      border-color: rgba(255, 70, 70, 0.3);
+      color: #ff8a8a;
+    }
+    .scanner-controls button.admin-only {
+      display: none;
+    }
+    .scanner-controls button.admin-only.show {
+      display: flex;
+    }
+    .scanner-controls button.scanner-only {
+      display: none;
+    }
+    .scanner-controls button.scanner-only.show {
+      display: flex;
+    }
+
+    .camera-test-btn {
+      background: rgba(76, 175, 80, 0.15);
+      border: 1px solid rgba(76, 175, 80, 0.3);
+      color: #81c784;
+      padding: 6px 14px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: 0.2s;
+      display: none;
+    }
+    .camera-test-btn.show {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .camera-test-btn:active {
+      transform: scale(0.95);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 12px 24px;
+      border-radius: 60px;
+      color: white;
+      font-size: 0.85rem;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      display: none;
+      z-index: 999;
+      animation: fadeSlide 0.3s ease;
+      max-width: 90%;
+      text-align: center;
+    }
+    .toast.show {
+      display: block;
+    }
+    .toast.error {
+      border-color: #ff5e5e;
+      background: rgba(200, 50, 50, 0.2);
+    }
+    .toast.success {
+      border-color: #4caf50;
+      background: rgba(76, 175, 80, 0.15);
+    }
+
+    .auth-status {
+      font-size: 0.65rem;
+      padding: 4px 12px;
+      border-radius: 30px;
+      background: rgba(255, 215, 0, 0.1);
+      color: #ffd966;
+    }
+    .auth-status.connected {
+      background: rgba(76, 175, 80, 0.15);
+      color: #81c784;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.1);
+      border-top: 2px solid #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 6px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 500px) {
+      .login-card {
+        padding: 1.8rem 1.2rem;
+      }
+      .brand h1 {
+        font-size: 1.4rem;
+      }
+      .dashboard-header {
+        padding: 1rem 1.2rem;
+      }
+      .modal-content {
+        padding: 0.8rem;
+      }
+      #scanner-video {
+        height: 250px;
+      }
+      .scanner-overlay {
+        width: 160px;
+        height: 160px;
+      }
+      .admin-panel .grid-2 {
+        grid-template-columns: 1fr;
+      }
+      .checkpoint-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="toast" class="toast"></div>
+
+  <!-- LOGIN -->
+  <div id="loginContainer" class="login-card">
+    <div class="brand">
+      <i class="fas fa-shield-alt"></i>
+      <h1>Amano <span>Check</span></h1>
+    </div>
+    <div class="subtitle">
+      <i class="fas fa-lock" style="margin-right: 8px; opacity: 0.5;"></i> Masukkan PIN yang diberikan admin
+    </div>
+    <div class="input-group">
+      <label><i class="fas fa-key" style="margin-right: 8px;"></i> PIN Akses</label>
+      <div class="input-wrapper">
+        <i class="fas fa-lock"></i>
+        <input type="password" id="pinInput" placeholder="******" maxlength="6" autocomplete="off" />
+      </div>
+    </div>
+    <div class="pin-dots" id="pinDots">
+      <span class="pin-dot" data-index="0"></span>
+      <span class="pin-dot" data-index="1"></span>
+      <span class="pin-dot" data-index="2"></span>
+      <span class="pin-dot" data-index="3"></span>
+      <span class="pin-dot" data-index="4"></span>
+      <span class="pin-dot" data-index="5"></span>
+    </div>
+    <button class="btn-login" id="loginBtn">
+      <i class="fas fa-arrow-right-to-bracket"></i> MASUK
+    </button>
+    <div id="errorMsg" class="error-msg">
+      <i class="fas fa-circle-exclamation"></i>
+      <span id="errorText">PIN tidak dikenali</span>
+    </div>
+    <div class="role-badge">
+      <i class="fas fa-user-cog"></i> Admin · Petugas
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardContainer" class="dashboard">
+    <div class="dashboard-header">
+      <h2><i class="fas fa-home"></i> <span id="dashboardTitle">Beranda</span></h2>
+      <div class="flex-between">
+        <span class="role-tag" id="roleBadge">Admin</span>
+        <span class="auth-status" id="authStatus">🔌 Menghubungkan...</span>
+        <button class="camera-test-btn" id="cameraTestBtn">
+          <i class="fas fa-camera"></i> Test
+        </button>
+        <button class="btn-logout" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Keluar</button>
+      </div>
+    </div>
+
+    <!-- ADMIN PANEL -->
+    <div class="admin-panel" id="adminPanel">
+      <div class="title"><i class="fas fa-crown"></i> Panel Admin</div>
+      <div class="grid-2">
+        <button class="btn-admin-action primary" id="btnGenerateQRISPanel">
+          <i class="fas fa-qrcode"></i> Generate QRIS
+        </button>
+        <button class="btn-admin-action" id="btnPrintQRISPanel">
+          <i class="fas fa-print"></i> Cetak QRIS
+        </button>
+        <button class="btn-admin-action" id="btnExportData">
+          <i class="fas fa-file-export"></i> Export Data
+        </button>
+        <button class="btn-admin-action danger" id="btnClearHistory">
+          <i class="fas fa-trash"></i> Reset History
+        </button>
+      </div>
+    </div>
+
+    <!-- CHECKPOINT GRID -->
+    <div class="checkpoint-section" id="checkpointSection">
+      <div class="section-title">
+        <i class="fas fa-qrcode"></i> Check Point Area
+        <span style="font-size:0.7rem; color:rgba(255,255,255,0.3); margin-left:auto;">
+          <i class="fas fa-qrcode"></i> Klik area untuk generate QRIS
+        </span>
+      </div>
+      <div class="checkpoint-grid" id="checkpointGrid"></div>
+    </div>
+
+    <!-- SCAN BUTTON (Petugas) -->
+    <button class="btn-scan" id="scanQRISBtn">
+      <i class="fas fa-camera"></i> Scan QRIS Check Point
+    </button>
+
+    <!-- HISTORY -->
+    <div class="history-section">
+      <div class="title">
+        <i class="fas fa-clock-rotate-left"></i> Riwayat Scan
+        <button class="refresh-btn" id="refreshHistoryBtn">
+          <i class="fas fa-rotate"></i> Refresh
+        </button>
+        <span class="count" id="historyCount">0 scan</span>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">
+          <i class="fas fa-inbox"></i>
+          Belum ada riwayat scan
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SCAN -->
+  <div class="modal-overlay" id="qrisModal">
+    <div class="modal-content">
+      <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+      
+      <div class="modal-title" id="modalTitle">
+        <i class="fas fa-camera"></i> Scan QRIS
+      </div>
+
+      <!-- QRIS Generator (Admin) -->
+      <div class="qris-generator" id="qrisGenerator">
+        <div class="label">📋 QRIS Area (Admin)</div>
+        <div class="qris-area-name" id="qrisAreaName">-</div>
+        <div id="qrcode"></div>
+        <div class="qris-code" id="qrisCodeValue">-</div>
+      </div>
+
+      <!-- Scanner -->
+      <div class="scanner-container" id="scannerContainer">
+        <div id="scanner-video"></div>
+        <div class="scanner-overlay"></div>
+      </div>
+
+      <!-- Hasil Scan -->
+      <div class="scan-result" id="scanResult">
+        <div class="label">Hasil Scan</div>
+        <div class="value" id="scanResultValue">-</div>
+        <div class="area-detected" id="areaDetected">
+          <i class="fas fa-info-circle"></i> Menunggu scan...
+        </div>
+        <div class="location-info" id="locationInfo">
+          <i class="fas fa-location-dot"></i> <span id="locationText">Menunggu lokasi...</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="scanner-controls">
+        <button id="btnStartScan" class="primary scanner-only show">
+          <i class="fas fa-play"></i> Mulai Scan
+        </button>
+        <button id="btnStopScan" class="danger scanner-only" style="display:none;">
+          <i class="fas fa-stop"></i> Stop
+        </button>
+        <button id="btnSaveScan" class="success scanner-only" style="display:none;">
+          <i class="fas fa-check"></i> Simpan
+        </button>
+        <button id="btnResetScan" class="danger scanner-only" style="display:none;">
+          <i class="fas fa-rotate"></i> Ulang
+        </button>
+        <!-- Admin Only -->
+        <button id="btnGenerateQRIS" class="primary admin-only">
+          <i class="fas fa-qrcode"></i> Generate QRIS
+        </button>
+        <button id="btnPrintQRIS" class="primary admin-only">
+          <i class="fas fa-print"></i> Cetak QRIS
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ============================================================
+    // FIREBASE INIT
+    // ============================================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBuHsW3JZa7p_7Md6mOcqZnRKr45daXL3I",
+      authDomain: "app-amano.firebaseapp.com",
+      projectId: "app-amano",
+      storageBucket: "app-amano.firebasestorage.app",
+      messagingSenderId: "195756338232",
+      appId: "1:195756338232:web:c58088fd86b70d15420acd"
+    };
+
+    let db, auth;
+    let html5QrCode = null;
+    let watchId = null;
+    let currentPosition = null;
+    let currentRole = null;
+    let scannedResult = null;
+    let detectedArea = null;
+    let isScanning = false;
+    let scanHistoryData = [];
+    let scanHistory = {};
+    let isLoading = false;
+
+    try {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      auth = firebase.auth();
+      db.enablePersistence().catch(() => {});
+      console.log('✅ Firebase connected');
+    } catch (error) {
+      console.error('❌ Firebase error:', error);
+    }
+
+    // ============================================================
+    // DATA AREA
+    // ============================================================
+    const AREA_LIST = [
+      { id: 'gudang', name: 'Gudang', icon: 'fa-warehouse' },
+      { id: 'stasiun_kernel', name: 'Stasiun Kernel', icon: 'fa-microchip' },
+      { id: 'jangkos', name: 'Jangkos', icon: 'fa-oil-can' },
+      { id: 'stabilizer', name: 'Stabilizer', icon: 'fa-bolt' },
+      { id: 'workshop', name: 'Workshop', icon: 'fa-screwdriver-wrench' },
+      { id: 'engine_room', name: 'Engine Room', icon: 'fa-engine' },
+      { id: 'storage_tank', name: 'Storage Tank', icon: 'fa-droplet' },
+      { id: 'dermaga', name: 'Dermaga', icon: 'fa-anchor' },
+      { id: 'kantor', name: 'Kantor', icon: 'fa-building' }
+    ];
+
+    const AREA_MAP = {};
+    AREA_LIST.forEach(area => {
+      AREA_MAP[area.id.toUpperCase()] = area;
+    });
+
+    const PIN_DB = {
+      '123456': { role: 'admin', label: 'Admin' },
+      '111222': { role: 'petugas', label: 'Petugas' }
+    };
+
+    // ============================================================
+    // DOM REFS
+    // ============================================================
+    const loginContainer = document.getElementById('loginContainer');
+    const dashboardContainer = document.getElementById('dashboardContainer');
+    const pinInput = document.getElementById('pinInput');
+    const loginBtn = document.getElementById('loginBtn');
+    const errorMsg = document.getElementById('errorMsg');
+    const errorText = document.getElementById('errorText');
+    const pinDots = document.querySelectorAll('.pin-dot');
+    const roleBadge = document.getElementById('roleBadge');
+    const dashboardTitle = document.getElementById('dashboardTitle');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const authStatus = document.getElementById('authStatus');
+    const toast = document.getElementById('toast');
+    const scanQRISBtn = document.getElementById('scanQRISBtn');
+    const historyList = document.getElementById('historyList');
+    const historyCount = document.getElementById('historyCount');
+    const refreshHistoryBtn = document.getElementById('refreshHistoryBtn');
+    const cameraTestBtn = document.getElementById('cameraTestBtn');
+    
+    // Admin Panel
+    const adminPanel = document.getElementById('adminPanel');
+    const checkpointSection = document.getElementById('checkpointSection');
+    const checkpointGrid = document.getElementById('checkpointGrid');
+    const btnExportData = document.getElementById('btnExportData');
+    const btnClearHistory = document.getElementById('btnClearHistory');
+    const btnGenerateQRISPanel = document.getElementById('btnGenerateQRISPanel');
+    const btnPrintQRISPanel = document.getElementById('btnPrintQRISPanel');
+
+    // Modal
+    const qrisModal = document.getElementById('qrisModal');
+    const modalClose = document.getElementById('modalClose');
+    const modalTitle = document.getElementById('modalTitle');
+    const scannerContainer = document.getElementById('scannerContainer');
+    const scannerVideo = document.getElementById('scanner-video');
+    const scanResult = document.getElementById('scanResult');
+    const scanResultValue = document.getElementById('scanResultValue');
+    const areaDetected = document.getElementById('areaDetected');
+    const locationInfo = document.getElementById('locationInfo');
+    const locationText = document.getElementById('locationText');
+    const qrisGenerator = document.getElementById('qrisGenerator');
+    const qrcodeContainer = document.getElementById('qrcode');
+    const qrisAreaName = document.getElementById('qrisAreaName');
+    const qrisCodeValue = document.getElementById('qrisCodeValue');
+    
+    const btnStartScan = document.getElementById('btnStartScan');
+    const btnStopScan = document.getElementById('btnStopScan');
+    const btnSaveScan = document.getElementById('btnSaveScan');
+    const btnResetScan = document.getElementById('btnResetScan');
+    const btnGenerateQRIS = document.getElementById('btnGenerateQRIS');
+    const btnPrintQRIS = document.getElementById('btnPrintQRIS');
+    
+    const adminOnlyButtons = document.querySelectorAll('.admin-only');
+    const scannerOnlyButtons = document.querySelectorAll('.scanner-only');
+
+    // ============================================================
+    // UI FUNCTIONS
+    // ============================================================
+    function showToast(msg, type = 'info') {
+      toast.textContent = msg;
+      toast.className = 'toast show';
+      if (type === 'error') toast.classList.add('error');
+      else if (type === 'success') toast.classList.add('success');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.remove('show');
+        toast.className = 'toast';
+      }, 4000);
+    }
+
+    function updatePinDots(value) {
+      const len = value.length;
+      pinDots.forEach((dot, idx) => {
+        if (idx < len) dot.classList.add('filled');
+        else dot.classList.remove('filled');
+      });
+    }
+
+    function showError(msg) {
+      errorText.innerText = msg;
+      errorMsg.classList.add('show');
+    }
+
+    function hideError() {
+      errorMsg.classList.remove('show');
+    }
+
+    function formatTime(timestamp) {
+      if (!timestamp) return '-';
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleString('id-ID', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    function updateAuthStatus(status, message) {
+      authStatus.textContent = message || '🔌 Menghubungkan...';
+      authStatus.className = 'auth-status';
+      if (status === 'connected') {
+        authStatus.classList.add('connected');
+      }
+    }
+
+    function generateQRIS(areaId) {
+      const prefix = areaId.toUpperCase();
+      const timestamp = Date.now().toString().slice(-6);
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      return `AMANO-${prefix}-${timestamp}-${random}`;
+    }
+
+    function detectAreaFromQRIS(qrisText) {
+      const upperText = qrisText.toUpperCase();
+      for (const [key, area] of Object.entries(AREA_MAP)) {
+        if (upperText.includes(key)) {
+          return area;
+        }
+      }
+      const match = upperText.match(/AMANO-([A-Z_]+)-/);
+      if (match && match[1] && AREA_MAP[match[1]]) {
+        return AREA_MAP[match[1]];
+      }
+      return null;
+    }
+
+    // ============================================================
+    // GEOLOCATION
+    // ============================================================
+    function startLocationTracking() {
+      if (!navigator.geolocation) {
+        locationText.textContent = 'GPS tidak tersedia';
+        return;
+      }
+
+      locationText.textContent = 'Mengambil lokasi...';
+
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+
+      watchId = navigator.geolocation.watchPosition(
+        function(position) {
+          currentPosition = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+            accuracy: position.coords.accuracy
+          };
+          locationText.textContent = `${currentPosition.lat.toFixed(6)}, ${currentPosition.lng.toFixed(6)}`;
+          console.log('📍 Location:', currentPosition);
+        },
+        function(error) {
+          console.error('GPS error:', error);
+          let msg = 'Gagal ambil lokasi';
+          if (error.code === 1) msg = 'Izin lokasi ditolak';
+          else if (error.code === 2) msg = 'Sinyal GPS lemah';
+          locationText.textContent = msg;
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    }
+
+    function stopLocationTracking() {
+      if (watchId) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+      }
+    }
+
+    // ============================================================
+    // QRIS SCANNER
+    // ============================================================
+    function startQRScanner() {
+      if (isScanning) return;
+      if (currentRole === 'admin') {
+        showToast('⚠️ Admin tidak bisa scan', 'error');
+        return;
+      }
+      
+      console.log('🔍 Starting QR Scanner...');
+      
+      scanResult.classList.remove('show');
+      scannedResult = null;
+      detectedArea = null;
+      btnSaveScan.style.display = 'none';
+      btnResetScan.style.display = 'none';
+      btnStartScan.style.display = 'none';
+      btnStopScan.style.display = 'inline-block';
+      
+      startLocationTracking();
+      
+      if (html5QrCode) {
+        try {
+          html5QrCode.stop().then(() => {
+            html5QrCode = null;
+            initScanner();
+          }).catch(() => {
+            html5QrCode = null;
+            initScanner();
+          });
+        } catch (e) {
+          html5QrCode = null;
+          initScanner();
+        }
+      } else {
+        initScanner();
+      }
+    }
+
+    function initScanner() {
+      try {
+        if (scannerVideo) scannerVideo.innerHTML = '';
+        scannerContainer.classList.add('show');
+        
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('❌ Browser tidak support kamera', 'error');
+          stopQRScanner();
+          return;
+        }
+
+        navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } }
+        })
+        .then(stream => {
+          stream.getTracks().forEach(track => track.stop());
+          
+          html5QrCode = new Html5Qrcode("scanner-video");
+          
+          return html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 15, qrbox: { width: 200, height: 200 }, aspectRatio: 1.0 },
+            function(decodedText) {
+              if (scannedResult) return;
+              
+              console.log('✅ QRIS detected:', decodedText);
+              scannedResult = decodedText;
+              scanResultValue.textContent = decodedText;
+              
+              detectedArea = detectAreaFromQRIS(decodedText);
+              
+              if (detectedArea) {
+                areaDetected.className = 'area-detected';
+                areaDetected.innerHTML = `<i class="fas fa-check-circle"></i> Area: <strong>${detectedArea.name}</strong>`;
+                showToast(`✅ Area: ${detectedArea.name}`, 'success');
+              } else {
+                areaDetected.className = 'area-detected error';
+                areaDetected.innerHTML = `<i class="fas fa-exclamation-circle"></i> QRIS tidak dikenali`;
+                showToast('⚠️ QRIS tidak valid', 'error');
+              }
+              
+              scanResult.classList.add('show');
+              btnSaveScan.style.display = 'inline-block';
+              btnResetScan.style.display = 'inline-block';
+              btnStopScan.style.display = 'none';
+              btnStartScan.style.display = 'none';
+              
+              if (html5QrCode) {
+                html5QrCode.stop().then(() => { isScanning = false; }).catch(() => { isScanning = false; });
+              }
+            },
+            function(error) {}
+          );
+        })
+        .then(() => {
+          isScanning = true;
+          showToast('📷 Arahkan ke QRIS', 'info');
+        })
+        .catch((error) => {
+          console.error('❌ Camera error:', error);
+          let msg = 'Gagal akses kamera: ';
+          if (error.name === 'NotAllowedError') msg += 'Izin ditolak';
+          else if (error.name === 'NotFoundError') msg += 'Kamera tidak ditemukan';
+          else msg += error.message || 'Unknown error';
+          showToast(msg, 'error');
+          stopQRScanner();
+        });
+        
+      } catch (error) {
+        console.error('❌ Init error:', error);
+        showToast('❌ Error: ' + (error.message || 'Unknown'), 'error');
+        stopQRScanner();
+      }
+    }
+
+    function stopQRScanner() {
+      if (html5QrCode) {
+        try {
+          html5QrCode.stop().then(() => {
+            html5QrCode = null;
+            isScanning = false;
+          }).catch(() => {
+            html5QrCode = null;
+            isScanning = false;
+          });
+        } catch (e) {
+          html5QrCode = null;
+          isScanning = false;
+        }
+      }
+      stopLocationTracking();
+      btnStartScan.style.display = 'inline-block';
+      btnStopScan.style.display = 'none';
+      isScanning = false;
+    }
+
+    // ============================================================
+    // TEST CAMERA
+    // ============================================================
+    async function testCamera() {
+      showToast('🔍 Mengecek kamera...', 'info');
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          showToast('❌ Browser tidak support', 'error');
+          return false;
+        }
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cameras = devices.filter(d => d.kind === 'videoinput');
+        console.log(`📷 ${cameras.length} kamera ditemukan`);
+        if (cameras.length === 0) {
+          showToast('❌ Tidak ada kamera', 'error');
+          return false;
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'environment' }
+        });
+        stream.getTracks().forEach(track => track.stop());
+        showToast(`✅ Kamera OK (${cameras.length})`, 'success');
+        return true;
+      } catch (error) {
+        console.error('Camera test error:', error);
+        showToast('❌ ' + (error.message || 'Unknown error'), 'error');
+        return false;
+      }
+    }
+
+    // ============================================================
+    // SAVE CHECKPOINT
+    // ============================================================
+    async function saveCheckpoint() {
+      if (!detectedArea) {
+        showToast('❌ Area tidak terdeteksi', 'error');
+        return;
+      }
+      if (!db) {
+        showToast('❌ Database tidak tersedia', 'error');
+        return;
+      }
+
+      btnSaveScan.disabled = true;
+      btnSaveScan.innerHTML = '<span class="spinner"></span> Menyimpan...';
+
+      try {
+        const data = {
+          area: detectedArea.id,
+          areaName: detectedArea.name,
+          qris: scannedResult,
+          scannedBy: 'petugas',
+          scannedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          timestamp: new Date().toISOString()
+        };
+        if (currentPosition) {
+          data.location = { lat: currentPosition.lat, lng: currentPosition.lng };
+          data.locationAccuracy = currentPosition.accuracy;
+        }
+
+        await db.collection('checkpoints').add(data);
+        await loadScanHistory();
+        showToast(`✅ ${detectedArea.name} tercatat`, 'success');
+        closeModal();
+      } catch (error) {
+        console.error('Save error:', error);
+        showToast('❌ Gagal simpan: ' + error.message, 'error');
+      } finally {
+        btnSaveScan.disabled = false;
+        btnSaveScan.innerHTML = '<i class="fas fa-check"></i> Simpan';
+      }
+    }
+
+    // ============================================================
+    // LOAD HISTORY
+    // ============================================================
+    async function loadScanHistory() {
+      if (!db || isLoading) return;
+      
+      isLoading = true;
+      refreshHistoryBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      refreshHistoryBtn.disabled = true;
+      
+      try {
+        const snapshot = await db.collection('checkpoints')
+          .orderBy('scannedAt', 'desc')
+          .limit(100)
+          .get();
+        
+        scanHistory = {};
+        scanHistoryData = [];
+        
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.area) scanHistory[data.area] = true;
+          scanHistoryData.push({ id: doc.id, ...data });
+        });
+        
+        renderCheckpointGrid();
+        renderHistory();
+        
+      } catch (error) {
+        console.error('Load error:', error);
+        showToast('❌ Gagal muat riwayat', 'error');
+      } finally {
+        isLoading = false;
+        refreshHistoryBtn.innerHTML = '<i class="fas fa-rotate"></i> Refresh';
+        refreshHistoryBtn.disabled = false;
+      }
+    }
+
+    function renderCheckpointGrid() {
+      const isAdmin = (currentRole === 'admin');
+      
+      if (!isAdmin) {
+        checkpointGrid.innerHTML = '';
+        checkpointSection.classList.remove('show');
+        return;
+      }
+      
+      checkpointSection.classList.add('show');
+      checkpointGrid.innerHTML = '';
+      
+      AREA_LIST.forEach(area => {
+        const card = document.createElement('div');
+        card.className = 'checkpoint-card';
+        if (scanHistory[area.id]) card.classList.add('scanned');
+        card.innerHTML = `
+          <i class="fas ${area.icon}"></i>
+          <div class="name">${area.name}</div>
+          <span class="badge">${scanHistory[area.id] ? '✓ Terscan' : 'Belum scan'}</span>
+          <div class="admin-badge show">👑 Admin</div>
+        `;
+        card.addEventListener('click', () => openModalWithQRIS(area));
+        checkpointGrid.appendChild(card);
+      });
+    }
+
+    function renderHistory() {
+      if (scanHistoryData.length === 0) {
+        historyList.innerHTML = `
+          <div class="history-empty">
+            <i class="fas fa-inbox"></i>
+            Belum ada riwayat scan
+          </div>
+        `;
+        historyCount.textContent = '0 scan';
+        return;
+      }
+
+      historyCount.textContent = `${scanHistoryData.length} scan`;
+      historyList.innerHTML = '';
+      
+      scanHistoryData.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        const area = AREA_MAP[item.area?.toUpperCase()];
+        const icon = area ? area.icon : 'fa-qrcode';
+        div.innerHTML = `
+          <div class="top-row">
+            <div class="area-name">
+              <i class="fas ${icon}"></i> ${item.areaName || item.area || 'Unknown'}
+            </div>
+            <div class="time">${formatTime(item.scannedAt)}</div>
+          </div>
+          <div class="details">
+            <span><i class="fas fa-user"></i> ${item.scannedBy || 'petugas'}</span>
+            ${item.location ? `<span><i class="fas fa-location-dot"></i> ${item.location.lat.toFixed(6)}, ${item.location.lng.toFixed(6)}</span>` : ''}
+          </div>
+          <div class="qris-code">${item.qris || '-'}</div>
+        `;
+        historyList.appendChild(div);
+      });
+    }
+
+    // ============================================================
+    // AUTHENTICATION
+    // ============================================================
+    async function authenticate() {
+      if (!auth) return false;
+      try {
+        if (auth.currentUser) {
+          updateAuthStatus('connected', '✅ Terautentikasi');
+          return true;
+        }
+        await auth.signInAnonymously();
+        updateAuthStatus('connected', '✅ Terautentikasi');
+        return true;
+      } catch (error) {
+        console.error('Auth error:', error);
+        updateAuthStatus('', '❌ Gagal auth');
+        return false;
+      }
+    }
+
+    // ============================================================
+    // LOGIN
+    // ============================================================
+    async function handleLogin() {
+      const pin = pinInput.value.trim();
+      if (!pin) { showError('Masukkan PIN.'); return; }
+      if (pin.length < 4) { showError('PIN minimal 4.'); return; }
+
+      const user = PIN_DB[pin];
+      if (!user) {
+        showError('PIN tidak dikenali.');
+        pinInput.value = '';
+        updatePinDots('');
+        pinInput.focus();
+        return;
+      }
+
+      hideError();
+      currentRole = user.role;
+      await authenticate();
+      showDashboard(user);
+    }
+
+    // ============================================================
+    // DASHBOARD
+    // ============================================================
+    function showDashboard(user) {
+      loginContainer.style.display = 'none';
+      dashboardContainer.classList.add('active');
+
+      const isAdmin = (user.role === 'admin');
+
+      roleBadge.textContent = isAdmin ? 'Admin' : 'Petugas';
+      roleBadge.className = `role-tag ${isAdmin ? 'admin' : 'petugas'}`;
+      dashboardTitle.textContent = isAdmin ? 'Dashboard Admin' : 'Dashboard Petugas';
+
+      // Admin: Tampilkan admin panel & checkpoint, sembunyikan scan button
+      if (isAdmin) {
+        adminPanel.classList.add('show');
+        checkpointSection.classList.add('show');
+        scanQRISBtn.classList.add('hidden');
+        cameraTestBtn.classList.remove('show');
+        scannerContainer.classList.remove('show');
+        scannerOnlyButtons.forEach(btn => btn.classList.remove('show'));
+        adminOnlyButtons.forEach(btn => btn.classList.add('show'));
+      } 
+      // Petugas: Sembunyikan admin panel & checkpoint, tampilkan scan button
+      else {
+        adminPanel.classList.remove('show');
+        checkpointSection.classList.remove('show');
+        scanQRISBtn.classList.remove('hidden');
+        cameraTestBtn.classList.add('show');
+        cameraTestBtn.style.display = 'inline-flex';
+        scannerContainer.classList.add('show');
+        scannerOnlyButtons.forEach(btn => btn.classList.add('show'));
+        adminOnlyButtons.forEach(btn => btn.classList.remove('show'));
+      }
+
+      loadScanHistory();
+
+      scanQRISBtn.onclick = function() {
+        openModal('scan');
+      };
+    }
+
+    // ============================================================
+    // MODAL
+    // ============================================================
+    function openModal(mode = 'scan') {
+      const isAdmin = (currentRole === 'admin');
+      
+      stopQRScanner();
+      
+      scanResult.classList.remove('show');
+      scannedResult = null;
+      detectedArea = null;
+      btnSaveScan.style.display = 'none';
+      btnResetScan.style.display = 'none';
+      btnStartScan.style.display = 'inline-block';
+      btnStopScan.style.display = 'none';
+      scanResultValue.textContent = '-';
+      areaDetected.className = 'area-detected';
+      areaDetected.innerHTML = `<i class="fas fa-info-circle"></i> Menunggu scan...`;
+      locationText.textContent = 'Menunggu lokasi...';
+      currentPosition = null;
+
+      if (isAdmin && mode === 'generate') {
+        qrisGenerator.classList.add('show');
+        adminOnlyButtons.forEach(btn => btn.classList.add('show'));
+        scannerContainer.classList.remove('show');
+        scannerOnlyButtons.forEach(btn => btn.classList.remove('show'));
+        modalTitle.innerHTML = '<i class="fas fa-qrcode"></i> Generate QRIS';
+      } else {
+        qrisGenerator.classList.remove('show');
+        adminOnlyButtons.forEach(btn => btn.classList.remove('show'));
+        scannerContainer.classList.add('show');
+        scannerOnlyButtons.forEach(btn => btn.classList.add('show'));
+        modalTitle.innerHTML = '<i class="fas fa-camera"></i> Scan QRIS';
+        
+        if (!isAdmin) {
+          setTimeout(() => startQRScanner(), 500);
+        }
+      }
+      
+      qrisModal.classList.add('active');
+    }
+
+    function openModalWithQRIS(area) {
+      if (currentRole !== 'admin') {
+        openModal('scan');
+        return;
+      }
+      
+      const qris = generateQRIS(area.id);
+      
+      stopQRScanner();
+      scanResult.classList.remove('show');
+      scannedResult = null;
+      detectedArea = null;
+      
+      qrisGenerator.classList.add('show');
+      qrisAreaName.textContent = `📍 ${area.name}`;
+      qrisCodeValue.textContent = qris;
+      
+      qrcodeContainer.innerHTML = '';
+      try {
+        new QRCode(qrcodeContainer, {
+          text: qris,
+          width: 180,
+          height: 180,
+          colorDark: "#1a2f44",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.H
+        });
+      } catch (e) {
+        qrcodeContainer.innerHTML = '<p style="color:white;">Error</p>';
+      }
+      
+      adminOnlyButtons.forEach(btn => btn.classList.add('show'));
+      scannerContainer.classList.remove('show');
+      scannerOnlyButtons.forEach(btn => btn.classList.remove('show'));
+      modalTitle.innerHTML = '<i class="fas fa-qrcode"></i> Generate QRIS';
+      
+      qrisModal.classList.add('active');
+    }
+
+    function closeModal() {
+      stopQRScanner();
+      stopLocationTracking();
+      qrisModal.classList.remove('active');
+      qrisGenerator.classList.remove('show');
+    }
+
+    // ============================================================
+    // ADMIN FUNCTIONS
+    // ============================================================
+    async function exportData() {
+      if (currentRole !== 'admin') {
+        showToast('⚠️ Hanya Admin', 'error');
+        return;
+      }
+      try {
+        const snapshot = await db.collection('checkpoints').orderBy('scannedAt', 'desc').get();
+        let csv = 'Area,Area Name,QRIS,Scanned By,Timestamp,Latitude,Longitude\n';
+        snapshot.forEach(doc => {
+          const d = doc.data();
+          csv += `${d.area||''},${d.areaName||''},${d.qris||''},${d.scannedBy||''},${d.timestamp||''},${d.location?.lat||''},${d.location?.lng||''}\n`;
+        });
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `checkpoint_data_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showToast('✅ Data di-export', 'success');
+      } catch (error) {
+        showToast('❌ Gagal export', 'error');
+      }
+    }
+
+    async function clearHistory() {
+      if (currentRole !== 'admin') {
+        showToast('⚠️ Hanya Admin', 'error');
+        return;
+      }
+      if (!confirm('Hapus semua data check-in?')) return;
+      try {
+        const snapshot = await db.collection('checkpoints').get();
+        const batch = db.batch();
+        snapshot.forEach(doc => batch.delete(doc.ref));
+        await batch.commit();
+        scanHistory = {};
+        scanHistoryData = [];
+        renderCheckpointGrid();
+        renderHistory();
+        showToast('✅ History direset', 'success');
+      } catch (error) {
+        showToast('❌ Gagal reset', 'error');
+      }
+    }
+
+    // ============================================================
+    // LOGOUT
+    // ============================================================
+    function logout() {
+      currentRole = null;
+      dashboardContainer.classList.remove('active');
+      loginContainer.style.display = 'block';
+      pinInput.value = '';
+      updatePinDots('');
+      hideError();
+      pinInput.focus();
+      scanHistoryData = [];
+      renderHistory();
+      stopQRScanner();
+      closeModal();
+      if (auth) auth.signOut().catch(() => {});
+    }
+
+    // ============================================================
+    // EVENT LISTENERS
+    // ============================================================
+    pinInput.addEventListener('input', function() {
+      const val = this.value.replace(/\D/g, '').slice(0, 6);
+      this.value = val;
+      updatePinDots(val);
+      hideError();
+    });
+
+    loginBtn.addEventListener('click', handleLogin);
+    pinInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') handleLogin();
+    });
+
+    logoutBtn.addEventListener('click', logout);
+    modalClose.addEventListener('click', closeModal);
+    refreshHistoryBtn.addEventListener('click', loadScanHistory);
+    cameraTestBtn.addEventListener('click', testCamera);
+    
+    qrisModal.addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    btnStartScan.addEventListener('click', startQRScanner);
+    btnStopScan.addEventListener('click', function() {
+      stopQRScanner();
+      btnStartScan.style.display = 'inline-block';
+      btnStopScan.style.display = 'none';
+    });
+    
+    btnSaveScan.addEventListener('click', saveCheckpoint);
+    
+    btnResetScan.addEventListener('click', function() {
+      scanResult.classList.remove('show');
+      scannedResult = null;
+      detectedArea = null;
+      btnSaveScan.style.display = 'none';
+      btnResetScan.style.display = 'none';
+      btnStartScan.style.display = 'none';
+      btnStopScan.style.display = 'inline-block';
+      scanResultValue.textContent = '-';
+      areaDetected.className = 'area-detected';
+      areaDetected.innerHTML = `<i class="fas fa-info-circle"></i> Menunggu scan...`;
+      currentPosition = null;
+      startQRScanner();
+    });
+
+    btnGenerateQRIS.addEventListener('click', function() {
+      if (currentRole !== 'admin') {
+        showToast('⚠️ Hanya Admin', 'error');
+        return;
+      }
+      const randomArea = AREA_LIST[Math.floor(Math.random() * AREA_LIST.length)];
+      openModalWithQRIS(randomArea);
+    });
+
+    btnGenerateQRISPanel.addEventListener('click', function() {
+      if (currentRole !== 'admin') {
+        showToast('⚠️ Hanya Admin', 'error');
+        return;
+      }
+      const randomArea = AREA_LIST[Math.floor(Math.random() * AREA_LIST.length)];
+      openModalWithQRIS(randomArea);
+    });
+
+    btnPrintQRIS.addEventListener('click', function() {
+      if (currentRole !== 'admin') {
+        showToast('⚠️ Hanya Admin', 'error');
+        return;
+      }
+      window.print();
+    });
+
+    btnPrintQRISPanel.addEventListener('click', function() {
+      if (currentRole !== 'admin') {
+        showToast('⚠️ Hanya Admin', 'error');
+        return;
+      }
+      window.print();
+    });
+
+    btnExportData.addEventListener('click', exportData);
+    btnClearHistory.addEventListener('click', clearHistory);
+
+    // ============================================================
+    // INIT
+    // ============================================================
+    updatePinDots('');
+    dashboardContainer.classList.remove('active');
+    updateAuthStatus('', '⏳ Menunggu login...');
+
+    console.log('🔐 PIN: admin=123456, petugas=111222');
+    console.log('📱 Aplikasi siap digunakan');
+    console.log('👑 Admin: Panel Admin + Checkpoint Grid');
+    console.log('👤 Petugas: Scan QRIS');
+  </script>
+
+</body>
+</html>
